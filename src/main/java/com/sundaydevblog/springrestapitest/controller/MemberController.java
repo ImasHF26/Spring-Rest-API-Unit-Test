@@ -1,78 +1,63 @@
 package com.sundaydevblog.springrestapitest.controller;
 
 import com.sundaydevblog.springrestapitest.entity.Member;
-import com.sundaydevblog.springrestapitest.exception.CustomException;
-import com.sundaydevblog.springrestapitest.exception.CustomResponse;
 import com.sundaydevblog.springrestapitest.service.MemberService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/members")
+@RequestMapping("/members")
 public class MemberController {
 
-    static String URI = "/api/members/";
-
+    private static final Logger logger = LoggerFactory.getLogger(MemberController.class);
     private final MemberService memberService;
 
-    @Autowired
     public MemberController(MemberService memberService) {
         this.memberService = memberService;
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<Member> fetchAllMembers() {
-        return memberService.getAllMembers();
+    @GetMapping
+    public List<Member> getAllMembers() {
+        return memberService.findAll();
     }
 
-    @GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Optional<Member> findMemberById(@PathVariable("id") Long id) throws CustomException {
-        return Optional.of(memberService.getMemberById(id)
-                .orElseThrow(() -> new CustomException("Member with ID: '" + id + "' not found.")));
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Member createMember(@Valid @RequestBody Member member) {
+        return memberService.save(member);
     }
 
-    @PostMapping(
-            produces = MediaType.APPLICATION_JSON_VALUE,
-            consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Member saveMember(@RequestBody @Validated Member member) {
-        return memberService.saveMember(member);
-    }
-
-    @PutMapping(
-            produces = MediaType.APPLICATION_JSON_VALUE,
-            consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Member updateMember(@RequestBody @Validated Member member) throws CustomException {
-        if (memberService.getMemberById(member.getId()).isPresent()) {
-            return memberService.saveMember(member);
-        } else {
-            throw new CustomException("Member with ID: '" + member.getId() + "' not found.");
+    @PutMapping("/{id}")
+    public Member updateMember(@PathVariable Long id, @Valid @RequestBody Member member) {
+        logger.info("Received PUT request for ID: {}", id);
+        logger.info("Body received: id={}, firstName={}, lastName={}", 
+                    member.getId(), member.getFirstName(), member.getLastName());
+        logger.info("Checking if member exists for ID: {}", id);
+        boolean exists = memberService.existsById(id);
+        logger.info("Member exists: {}", exists);
+        if (!exists) {
+            logger.info("Throwing 404 for non-existent ID: {}", id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found");
         }
+        member.setId(id);
+        logger.info("Updating member with ID: {}", id);
+        return memberService.save(member);
     }
 
-    @DeleteMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CustomResponse> removeMember(@PathVariable("id") long id) {
-        if (memberService.getMemberById(id).isPresent()) {
-            this.memberService.removeMember(id);
-            return new ResponseEntity<>(
-                    new CustomResponse(HttpStatus.OK.value(),
-                            "Member with ID: '" + id + "' deleted."), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(
-                    new CustomResponse(HttpStatus.NOT_FOUND.value(),
-                            "Member with ID: '" + id + "' not found."), HttpStatus.NOT_FOUND);
-        }
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
+        logger.info("Handling ResponseStatusException with status: {}", ex.getStatusCode());
+        Map<String, Object> response = Map.of(
+            "status", ex.getStatusCode().value(),
+            "message", ex.getReason()
+        );
+        return new ResponseEntity<>(response, ex.getStatusCode());
     }
-
-    @GetMapping(value = "/hello")
-    public String sayHi(){
-        return "Say hello to my little friend, Jenkins!";
-    }
-
 }

@@ -1,42 +1,49 @@
 package com.sundaydevblog.springrestapitest.service.impl;
 
 import com.sundaydevblog.springrestapitest.entity.Member;
-import com.sundaydevblog.springrestapitest.repository.MemberRepository;
 import com.sundaydevblog.springrestapitest.service.MemberService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class MemberServiceImpl implements MemberService {
 
-    private final MemberRepository memberRepository;
+    private List<Member> members = new ArrayList<>();
+    private Long nextId = 1L;
 
-    @Autowired
-    public MemberServiceImpl(MemberRepository memberRepository) {
-        this.memberRepository = memberRepository;
+    @Override
+    public List<Member> findAll() {
+        return new ArrayList<>(members);
     }
 
     @Override
-    public List<Member> getAllMembers() {
-        return memberRepository.findAll();
+    public Member save(Member member) {
+        if (member.getId() == null) {
+            member.setId(nextId++);
+            members.add(member);
+        } else {
+            members.removeIf(m -> m.getId().equals(member.getId()));
+            members.add(member);
+        }
+        return member;
     }
 
     @Override
-    public Optional<Member> getMemberById(long id) {
-        return memberRepository.findById(id);
+    public boolean existsById(Long id) {
+        return members.stream().anyMatch(m -> m.getId().equals(id));
     }
 
     @Override
-    public Member saveMember(Member member) {
-        return memberRepository.save(member);
+    public Member getMemberById(Long id) {
+        return members.stream()
+                      .filter(m -> m.getId().equals(id))
+                      .findFirst()
+                      .orElse(null);
     }
 
-
     @Override
-    public void removeMember(long id) {
-        this.memberRepository.deleteById(id);
+    public void removeMember(Long id) {
+        members.removeIf(m -> m.getId().equals(id));
     }
 }
