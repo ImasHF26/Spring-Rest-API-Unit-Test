@@ -60,4 +60,8 @@ public class MemberController {
         );
         return new ResponseEntity<>(response, ex.getStatusCode());
     }
+    @GetMapping(value = "/hello")
+    public String sayHi(){
+    return "Say Hello";
+    }
 }
