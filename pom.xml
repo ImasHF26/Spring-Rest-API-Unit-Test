@@ -96,6 +96,18 @@
                         <release>17</release> <!-- Cible explicite pour la compatibilité -->
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>3.2.3</version> <!-- Utilise la version de Spring Boot que tu utilises -->
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </build>
 
